@@ -9,14 +9,14 @@ module.exports = class RedisDirtyHash
   @defaults =
     redis: null
     key: null
-    shouldDeleteOnSave: (k, v) -> typeof v == 'undefined'
+    shouldDeleteOnPersist: (k, v) -> typeof v == 'undefined'
     serialize: (k, v) -> JSON.stringify(v)
     deserialize: (k, v) -> JSON.parse(v)
 
   # opts:
   # - redis
   # - key
-  # - shouldDeleteOnSave
+  # - shouldDeleteOnPersist
   # - serialize
   # - deserialize
   constructor: (opts) ->
@@ -115,7 +115,7 @@ module.exports = class RedisDirtyHash
 
       # In some cases, such as undefined or null values, we may just want to
       # delete the key within the hash for that value.
-      if @opts.shouldDeleteOnSave(k, v)
+      if @opts.shouldDeleteOnPersist(k, v)
         hdelArgs.push k
       else
         hmsetArgs.push k

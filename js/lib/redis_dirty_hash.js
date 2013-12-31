@@ -14,7 +14,7 @@
     RedisDirtyHash.defaults = {
       redis: null,
       key: null,
-      shouldDeleteOnSave: function(k, v) {
+      shouldDeleteOnPersist: function(k, v) {
         return typeof v === 'undefined';
       },
       serialize: function(k, v) {
@@ -159,7 +159,7 @@
       hdelArgs = [this.opts.key];
       for (k in this.dirty) {
         v = this.properties[k];
-        if (this.opts.shouldDeleteOnSave(k, v)) {
+        if (this.opts.shouldDeleteOnPersist(k, v)) {
           hdelArgs.push(k);
         } else {
           hmsetArgs.push(k);
