@@ -67,3 +67,11 @@ Retrieves all keys from Redis. This will clobber any local changes to the keys.
 ### `#destroy(callback)`
 
 Destroys the entire hash in Redis. This will not clear internal properties, but it will set them as dirty, so they will be persisted the next time `#persist` is called.
+
+### `#isPersisted()`
+
+Returns true if the values in the hash have been persisted to or retrieved from Redis, regardless of new changes.
+
+### `#isDirty(key)`
+
+Returns whether the value for the given key will be persisted the next time `#persist` is called.

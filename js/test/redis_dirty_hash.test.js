@@ -26,7 +26,7 @@
     });
     describe('unpersisted hashes', function() {
       return it('should not be flagged as persisted', function() {
-        return assert(!this.hash.persisted);
+        return assert(!this.hash.isPersisted());
       });
     });
     describe('#get', function() {
@@ -80,8 +80,8 @@
           return assert.equal(this.hash.get('foobar'), 'barfoo');
         });
         it('should set the dirty flags', function() {
-          assert(this.hash.dirty.foo);
-          return assert(this.hash.dirty.foobar);
+          assert(this.hash.isDirty('foo'));
+          return assert(this.hash.isDirty('foobar'));
         });
         return it('should not set the dirty flag if the value did not change', function(done) {
           var _this = this;
@@ -89,9 +89,9 @@
             if (err != null) {
               throw err;
             }
-            assert(!_this.hash.dirty.foo);
+            assert(!_this.hash.isDirty('foo'));
             _this.hash.set('foo', 'bar');
-            assert(!_this.hash.dirty.foo);
+            assert(!_this.hash.isDirty('foo'));
             return done();
           });
         });
@@ -108,8 +108,8 @@
           return assert.equal(this.hash.get('foobar'), 'barfoo');
         });
         it('should set the dirty flags', function() {
-          assert(this.hash.dirty.foo);
-          return assert(this.hash.dirty.foobar);
+          assert(this.hash.isDirty('foo'));
+          return assert(this.hash.isDirty('foobar'));
         });
         return it('should not set the dirty flag if the value did not change', function(done) {
           var _this = this;
@@ -117,14 +117,14 @@
             if (err != null) {
               throw err;
             }
-            assert(!_this.hash.dirty.foo);
-            assert(!_this.hash.dirty.foobar);
+            assert(!_this.hash.isDirty('foo'));
+            assert(!_this.hash.isDirty('foobar'));
             _this.hash.set({
               foo: 'bar',
               foobar: 'barfoo'
             });
-            assert(!_this.hash.dirty.foo);
-            assert(!_this.hash.dirty.foobar);
+            assert(!_this.hash.isDirty('foo'));
+            assert(!_this.hash.isDirty('foobar'));
             return done();
           });
         });
@@ -215,7 +215,8 @@
             });
           });
           it('should clear the dirty state', function() {
-            return assert.deepEqual(this.fetchedHash.dirty, {});
+            assert(!this.fetchedHash.isDirty('foo'));
+            return assert(!this.fetchedHash.isDirty('oof'));
           });
           return it('should clear unpersisted data', function() {
             assert.equal(this.fetchedHash.get('foo'), 'bar');
@@ -256,7 +257,8 @@
           });
         });
         it('should clear the dirty state', function() {
-          return assert.deepEqual(this.hash.dirty, {});
+          assert(!this.hash.isDirty('foo'));
+          return assert(!this.hash.isDirty('foobar'));
         });
         it('should not need Redis if the object is not dirty', function(done) {
           var _this = this;
@@ -287,7 +289,7 @@
           });
         });
         return it('should mark the hash as persisted', function() {
-          return assert(this.hash.persisted);
+          return assert(this.hash.isPersisted());
         });
       });
       describe('#destroy', function() {
@@ -320,7 +322,7 @@
           });
         });
         it('should mark the hash as unpersisted', function() {
-          return assert(!this.hash.persisted);
+          return assert(!this.hash.isPersisted());
         });
         return it('should mark all properties as dirty, so they will be persisted at the next upload', function(done) {
           var _this = this;

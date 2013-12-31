@@ -19,7 +19,7 @@ describe 'RedisDirtyHash', () ->
   describe 'unpersisted hashes', ->
 
     it 'should not be flagged as persisted', ->
-      assert !@hash.persisted
+      assert !@hash.isPersisted()
 
   describe '#get', ->
 
@@ -63,15 +63,15 @@ describe 'RedisDirtyHash', () ->
         assert.equal @hash.get('foobar'), 'barfoo'
 
       it 'should set the dirty flags', ->
-        assert @hash.dirty.foo
-        assert @hash.dirty.foobar
+        assert @hash.isDirty('foo')
+        assert @hash.isDirty('foobar')
 
       it 'should not set the dirty flag if the value did not change', (done) ->
         @hash.persist (err) =>
           throw err if err?
-          assert !@hash.dirty.foo
+          assert !@hash.isDirty('foo')
           @hash.set 'foo', 'bar'
-          assert !@hash.dirty.foo
+          assert !@hash.isDirty('foo')
           done()
 
     describe 'hash syntax', ->
@@ -83,17 +83,17 @@ describe 'RedisDirtyHash', () ->
         assert.equal @hash.get('foobar'), 'barfoo'
 
       it 'should set the dirty flags', ->
-        assert @hash.dirty.foo
-        assert @hash.dirty.foobar
+        assert @hash.isDirty('foo')
+        assert @hash.isDirty('foobar')
 
       it 'should not set the dirty flag if the value did not change', (done) ->
         @hash.persist (err) =>
           throw err if err?
-          assert !@hash.dirty.foo
-          assert !@hash.dirty.foobar
+          assert !@hash.isDirty('foo')
+          assert !@hash.isDirty('foobar')
           @hash.set foo: 'bar', foobar: 'barfoo'
-          assert !@hash.dirty.foo
-          assert !@hash.dirty.foobar
+          assert !@hash.isDirty('foo')
+          assert !@hash.isDirty('foobar')
           done()
 
   describe '#fetch', ->
@@ -153,7 +153,8 @@ describe 'RedisDirtyHash', () ->
             done()
 
         it 'should clear the dirty state', ->
-          assert.deepEqual @fetchedHash.dirty, {}
+          assert !@fetchedHash.isDirty('foo')
+          assert !@fetchedHash.isDirty('oof')
 
         it 'should clear unpersisted data', ->
           assert.equal @fetchedHash.get('foo'), 'bar'
@@ -178,7 +179,8 @@ describe 'RedisDirtyHash', () ->
           done()
 
       it 'should clear the dirty state', ->
-        assert.deepEqual @hash.dirty, {}
+        assert !@hash.isDirty('foo')
+        assert !@hash.isDirty('foobar')
 
       it 'should not need Redis if the object is not dirty', (done) ->
         @hash.opts.redis = null
@@ -196,7 +198,7 @@ describe 'RedisDirtyHash', () ->
             done()
 
       it 'should mark the hash as persisted', ->
-        assert @hash.persisted
+        assert @hash.isPersisted()
 
     describe '#destroy', ->
 
@@ -215,7 +217,7 @@ describe 'RedisDirtyHash', () ->
           done()
 
       it 'should mark the hash as unpersisted', ->
-        assert !@hash.persisted
+        assert !@hash.isPersisted()
 
       it 'should mark all properties as dirty, so they will be persisted at the next upload', (done) ->
         @hash.persist (err) =>

@@ -38,6 +38,14 @@
       this.persisted = false;
     }
 
+    RedisDirtyHash.prototype.isPersisted = function() {
+      return this.persisted;
+    };
+
+    RedisDirtyHash.prototype.isDirty = function(k) {
+      return this.dirty[k];
+    };
+
     RedisDirtyHash.prototype.fetch = function(done) {
       var _this = this;
       return this.opts.redis.hgetall(this.opts.key, function(err, value) {

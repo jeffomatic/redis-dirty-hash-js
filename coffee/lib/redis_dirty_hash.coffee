@@ -28,6 +28,12 @@ module.exports = class RedisDirtyHash
     @dirty = {}
     @persisted = false
 
+  isPersisted: ->
+    @persisted
+
+  isDirty: (k) ->
+    @dirty[k]
+
   fetch: (done) ->
     @opts.redis.hgetall @opts.key, (err, value) =>
       return done(err) if err?
