@@ -26,23 +26,23 @@ module.exports = class RedisDirtyHash
 
     @properties = {}
     @dirty = {}
+    @persisted = false
 
   fetch: (done) ->
     @opts.redis.hgetall @opts.key, (err, value) =>
       return done(err) if err?
 
+      @properties = {}
+      @dirty = {}
+      @persisted = true
+
       if isPlainObject(value)
-        @properties = {}
-        @dirty = {}
         for k, v of value
           try
             @properties[k] = @opts.deserialize(k, v)
           catch
             err = new Error("Cannot deserialize value for #{k}: #{v}")
             return done(err)
-      else
-        @properties = {}
-        @dirty = {}
 
       done()
 
@@ -51,15 +51,16 @@ module.exports = class RedisDirtyHash
       when 1 then @_hashSet(args...)
       when 2 then @_pairSet(args...)
       else throw new Error("Invalid number of arguments: #{args.length}")
-    @ # return self for chainability
 
   _pairSet: (k, v) ->
     if v != @properties[k]
       @properties[k] = v
       @dirty[k] = true
+    @ # return self for chainability
 
   _hashSet: (attribs) ->
     @_pairSet(k, v) for k, v of attribs
+    @ # return self for chainability
 
   get: (args) ->
     if !args?
@@ -83,13 +84,24 @@ module.exports = class RedisDirtyHash
     @properties[k]
 
   destroy: (done) ->
-    @opts.redis.del @opts.key, done
+    @opts.redis.del @opts.key, (err) =>
+      return done(err) if err?
+
+      # Don't consider this hash persisted anymore
+      @persisted = false
+
+      # Assume everything is now dirty, so all keys will be persisted on the
+      # next call to #persist.
+      @dirty = {}
+      @dirty[k] = true for k of @properties
+
+      done()
 
   # Writes new changes to Redis
-  save: (done) ->
+  persist: (done) ->
     # Build list of arguments to HMSET and HDEL
-    hmsetArgs = [ @opts.key ]
-    hdelArgs = [ @opts.key ]
+    hmsetArgs = [@opts.key]
+    hdelArgs = [@opts.key]
 
     # Add keys and values in series
     for k of @dirty
@@ -107,6 +119,7 @@ module.exports = class RedisDirtyHash
     finish = (err) =>
       return done(err) if err?
       @dirty = {}
+      @persisted = true
       done()
 
     if hmsetArgs.length > 1 && hdelArgs.length > 1

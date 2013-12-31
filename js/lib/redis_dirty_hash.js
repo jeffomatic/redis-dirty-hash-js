@@ -35,6 +35,7 @@
       }
       this.properties = {};
       this.dirty = {};
+      this.persisted = false;
     }
 
     RedisDirtyHash.prototype.fetch = function(done) {
@@ -44,9 +45,10 @@
         if (err != null) {
           return done(err);
         }
+        _this.properties = {};
+        _this.dirty = {};
+        _this.persisted = true;
         if (isPlainObject(value)) {
-          _this.properties = {};
-          _this.dirty = {};
           for (k in value) {
             v = value[k];
             try {
@@ -56,9 +58,6 @@
               return done(err);
             }
           }
-        } else {
-          _this.properties = {};
-          _this.dirty = {};
         }
         return done();
       });
@@ -69,32 +68,29 @@
       args = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
       switch (args.length) {
         case 1:
-          this._hashSet.apply(this, args);
-          break;
+          return this._hashSet.apply(this, args);
         case 2:
-          this._pairSet.apply(this, args);
-          break;
+          return this._pairSet.apply(this, args);
         default:
           throw new Error("Invalid number of arguments: " + args.length);
       }
-      return this;
     };
 
     RedisDirtyHash.prototype._pairSet = function(k, v) {
       if (v !== this.properties[k]) {
         this.properties[k] = v;
-        return this.dirty[k] = true;
+        this.dirty[k] = true;
       }
+      return this;
     };
 
     RedisDirtyHash.prototype._hashSet = function(attribs) {
-      var k, v, _results;
-      _results = [];
+      var k, v;
       for (k in attribs) {
         v = attribs[k];
-        _results.push(this._pairSet(k, v));
+        this._pairSet(k, v);
       }
-      return _results;
+      return this;
     };
 
     RedisDirtyHash.prototype.get = function(args) {
@@ -133,10 +129,22 @@
     };
 
     RedisDirtyHash.prototype.destroy = function(done) {
-      return this.opts.redis.del(this.opts.key, done);
+      var _this = this;
+      return this.opts.redis.del(this.opts.key, function(err) {
+        var k;
+        if (err != null) {
+          return done(err);
+        }
+        _this.persisted = false;
+        _this.dirty = {};
+        for (k in _this.properties) {
+          _this.dirty[k] = true;
+        }
+        return done();
+      });
     };
 
-    RedisDirtyHash.prototype.save = function(done) {
+    RedisDirtyHash.prototype.persist = function(done) {
       var finish, hdelArgs, hmsetArgs, k, v, _ref, _ref1, _ref2,
         _this = this;
       hmsetArgs = [this.opts.key];
@@ -155,6 +163,7 @@
           return done(err);
         }
         _this.dirty = {};
+        _this.persisted = true;
         return done();
       };
       if (hmsetArgs.length > 1 && hdelArgs.length > 1) {

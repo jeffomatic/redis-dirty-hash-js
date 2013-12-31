@@ -17,7 +17,7 @@
       "url" : "http://github.com/jeffomatic/redis-dirty-hash-js/raw/master/LICENSE"
     }
   ],
-  "main": "./js/lib/redis_hash",
+  "main": "./js/lib/redis_diry_hash",
   "dependencies": {},
   "devDependencies": {
     "coffee-script": "1.6.3",

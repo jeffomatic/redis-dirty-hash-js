@@ -16,6 +16,11 @@ describe 'RedisDirtyHash', () ->
       throw err if err?
       done()
 
+  describe 'unpersisted hashes', ->
+
+    it 'should not be flagged as persisted', ->
+      assert !@hash.persisted
+
   describe '#get', ->
 
     beforeEach ->
@@ -62,7 +67,7 @@ describe 'RedisDirtyHash', () ->
         assert @hash.dirty.foobar
 
       it 'should not set the dirty flag if the value did not change', (done) ->
-        @hash.save (err) =>
+        @hash.persist (err) =>
           throw err if err?
           assert !@hash.dirty.foo
           @hash.set 'foo', 'bar'
@@ -82,7 +87,7 @@ describe 'RedisDirtyHash', () ->
         assert @hash.dirty.foobar
 
       it 'should not set the dirty flag if the value did not change', (done) ->
-        @hash.save (err) =>
+        @hash.persist (err) =>
           throw err if err?
           assert !@hash.dirty.foo
           assert !@hash.dirty.foobar
@@ -119,11 +124,11 @@ describe 'RedisDirtyHash', () ->
 
       beforeEach (done) ->
         @hash.set foo: 'bar', foobar: 'barfoo'
-        @hash.save (err) =>
+        @hash.persist (err) =>
           throw err if err?
           done()
 
-      it 'should retrieve saved data', (done) ->
+      it 'should retrieve persisted data', (done) ->
         @fetchedHash = new RedisDirtyHash
           redis: redisClient
           key: @hash.opts.key
@@ -154,11 +159,11 @@ describe 'RedisDirtyHash', () ->
           assert.equal @fetchedHash.get('foo'), 'bar'
           assert !@fetchedHash.get('oof')?
 
-    describe '#save', ->
+    describe '#persist', ->
 
       beforeEach (done) ->
         @hash.set foo: 'bar', foobar: 'foobar'
-        @hash.save (err) =>
+        @hash.persist (err) =>
           throw err if err?
           done()
 
@@ -177,38 +182,60 @@ describe 'RedisDirtyHash', () ->
 
       it 'should not need Redis if the object is not dirty', (done) ->
         @hash.opts.redis = null
-        @hash.save (err) =>
+        @hash.persist (err) =>
           throw err if err?
           done()
 
       it 'by default, should delete keys that are undefined', (done) ->
         @hash.set foo: undefined
-        @hash.save (err) =>
+        @hash.persist (err) =>
           throw err if err?
           redisClient.hget @hash.opts.key, 'foo', (err, v) ->
             throw err if err?
             assert !v?
             done()
 
+      it 'should mark the hash as persisted', ->
+        assert @hash.persisted
+
     describe '#destroy', ->
 
-      it 'should eliminate persisted changes', (done) ->
+      beforeEach (done) ->
         @hash.set foo: 'bar', foobar: 'foobar'
-        @hash.save (err) =>
+        @hash.persist (err) =>
           throw err if err?
           @hash.destroy (err) =>
             throw err if err?
-            @hash.fetch (err) =>
-              throw err if err?
-              assert.deepEqual @hash.get(), {}
-              done()
+            done()
+
+      it 'should eliminate persisted changes', (done) ->
+        @hash.fetch (err) =>
+          throw err if err?
+          assert.deepEqual @hash.get(), {}
+          done()
+
+      it 'should mark the hash as unpersisted', ->
+        assert !@hash.persisted
+
+      it 'should mark all properties as dirty, so they will be persisted at the next upload', (done) ->
+        @hash.persist (err) =>
+          throw err if err?
+
+          otherHash = new RedisDirtyHash
+            redis: redisClient
+            key: @hash.opts.key
+
+          otherHash.fetch (err) =>
+            throw err if err?
+            assert.deepEqual @hash.get(), foo: 'bar', foobar: 'foobar'
+            done()
 
     describe 'serialization and deserialization', ->
 
       it 'by default, should JSON serialize/deserialize all values', (done) ->
         values = foo: 'bar', foobar: [1, 2, 3], barfoo: false, oof: 1, blah: null
         @hash.set values
-        @hash.save (err) =>
+        @hash.persist (err) =>
           throw err if err?
           otherHash = new RedisDirtyHash
             redis: redisClient

@@ -24,6 +24,11 @@
         return done();
       });
     });
+    describe('unpersisted hashes', function() {
+      return it('should not be flagged as persisted', function() {
+        return assert(!this.hash.persisted);
+      });
+    });
     describe('#get', function() {
       beforeEach(function() {
         this.hash.set('foo', 'bar');
@@ -80,7 +85,7 @@
         });
         return it('should not set the dirty flag if the value did not change', function(done) {
           var _this = this;
-          return this.hash.save(function(err) {
+          return this.hash.persist(function(err) {
             if (err != null) {
               throw err;
             }
@@ -108,7 +113,7 @@
         });
         return it('should not set the dirty flag if the value did not change', function(done) {
           var _this = this;
-          return this.hash.save(function(err) {
+          return this.hash.persist(function(err) {
             if (err != null) {
               throw err;
             }
@@ -169,14 +174,14 @@
             foo: 'bar',
             foobar: 'barfoo'
           });
-          return this.hash.save(function(err) {
+          return this.hash.persist(function(err) {
             if (err != null) {
               throw err;
             }
             return done();
           });
         });
-        it('should retrieve saved data', function(done) {
+        it('should retrieve persisted data', function(done) {
           var _this = this;
           this.fetchedHash = new RedisDirtyHash({
             redis: redisClient,
@@ -218,14 +223,14 @@
           });
         });
       });
-      describe('#save', function() {
+      describe('#persist', function() {
         beforeEach(function(done) {
           var _this = this;
           this.hash.set({
             foo: 'bar',
             foobar: 'foobar'
           });
-          return this.hash.save(function(err) {
+          return this.hash.persist(function(err) {
             if (err != null) {
               throw err;
             }
@@ -256,19 +261,19 @@
         it('should not need Redis if the object is not dirty', function(done) {
           var _this = this;
           this.hash.opts.redis = null;
-          return this.hash.save(function(err) {
+          return this.hash.persist(function(err) {
             if (err != null) {
               throw err;
             }
             return done();
           });
         });
-        return it('by default, should delete keys that are undefined', function(done) {
+        it('by default, should delete keys that are undefined', function(done) {
           var _this = this;
           this.hash.set({
             foo: void 0
           });
-          return this.hash.save(function(err) {
+          return this.hash.persist(function(err) {
             if (err != null) {
               throw err;
             }
@@ -281,15 +286,18 @@
             });
           });
         });
+        return it('should mark the hash as persisted', function() {
+          return assert(this.hash.persisted);
+        });
       });
       describe('#destroy', function() {
-        return it('should eliminate persisted changes', function(done) {
+        beforeEach(function(done) {
           var _this = this;
           this.hash.set({
             foo: 'bar',
             foobar: 'foobar'
           });
-          return this.hash.save(function(err) {
+          return this.hash.persist(function(err) {
             if (err != null) {
               throw err;
             }
@@ -297,13 +305,43 @@
               if (err != null) {
                 throw err;
               }
-              return _this.hash.fetch(function(err) {
-                if (err != null) {
-                  throw err;
-                }
-                assert.deepEqual(_this.hash.get(), {});
-                return done();
+              return done();
+            });
+          });
+        });
+        it('should eliminate persisted changes', function(done) {
+          var _this = this;
+          return this.hash.fetch(function(err) {
+            if (err != null) {
+              throw err;
+            }
+            assert.deepEqual(_this.hash.get(), {});
+            return done();
+          });
+        });
+        it('should mark the hash as unpersisted', function() {
+          return assert(!this.hash.persisted);
+        });
+        return it('should mark all properties as dirty, so they will be persisted at the next upload', function(done) {
+          var _this = this;
+          return this.hash.persist(function(err) {
+            var otherHash;
+            if (err != null) {
+              throw err;
+            }
+            otherHash = new RedisDirtyHash({
+              redis: redisClient,
+              key: _this.hash.opts.key
+            });
+            return otherHash.fetch(function(err) {
+              if (err != null) {
+                throw err;
+              }
+              assert.deepEqual(_this.hash.get(), {
+                foo: 'bar',
+                foobar: 'foobar'
               });
+              return done();
             });
           });
         });
@@ -320,7 +358,7 @@
             blah: null
           };
           this.hash.set(values);
-          return this.hash.save(function(err) {
+          return this.hash.persist(function(err) {
             var otherHash;
             if (err != null) {
               throw err;
