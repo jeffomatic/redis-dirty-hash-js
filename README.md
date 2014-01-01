@@ -11,11 +11,11 @@ hash = new RedisDirtyHash({redis: redisClient, key: 'myHash'});
 // Javascript POD will be serialized and deserialized using JSON
 hash.set({name: 'John', occupation: 'baker', age: 30, hobbies: ['stamps', 'golf']});
 
-hash.save(function(err) {
+hash.persist(function(err) {
   hash.set({name: 'John', occupation: 'hatter'});
 
   // This will only persist the change to the `occupation` property.
-  hash.save();
+  hash.persist();
 });
 ```
 
